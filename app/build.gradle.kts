@@ -1,8 +1,19 @@
+@file:Suppress("PropertyName")
+
+val agp_version: String by project
+val kotlin_version: String by project
+val compose_bom_version: String by project
+val core_ktx_version: String by project
+val lifecycle_version: String by project
+val activity_compose_version: String by project
+val junit_version: String by project
+val androidx_junit_version: String by project
+val espresso_version: String by project
+
+
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.compose)
-    /*kotlin("jvm")
-    kotlin("plugin.serialization") version "2.0.21"*/
+    id("com.android.application") version "9.0.1"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.3.0"
 }
 
 android {
@@ -33,8 +44,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     buildFeatures {
@@ -43,19 +54,19 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation("androidx.core:core-ktx:$core_ktx_version")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version")
+    implementation("androidx.activity:activity-compose:$activity_compose_version")
+    implementation(platform("androidx.compose:compose-bom:$compose_bom_version"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    testImplementation("junit:junit:$junit_version")
+    androidTestImplementation("androidx.test.ext:junit:$androidx_junit_version")
+    androidTestImplementation("androidx.test.espresso:espresso-core:$espresso_version")
+    androidTestImplementation(platform("androidx.compose:compose-bom:$compose_bom_version"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
