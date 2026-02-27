@@ -1,5 +1,6 @@
 package ru.moderators.studytogether.server
 
+
 fun main() {
 
     /*embeddedServer(Netty, port = 8080) {

@@ -1,7 +1,11 @@
 plugins {
     kotlin("jvm")
-    id("io.ktor.plugin") version "3.4.0"
     kotlin("plugin.serialization") version "2.0.21"
+    id("io.ktor.plugin") version "3.4.0"
+}
+
+application {
+    mainClass = "ru.moderators.studytogether.server.MainKt"
 }
 
 group = "ru.moderators.studytogether"
