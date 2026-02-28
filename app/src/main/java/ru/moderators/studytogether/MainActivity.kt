@@ -10,7 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.ktor.client.request.get
 import ru.moderators.studytogether.api.ClaimType
+import ru.moderators.studytogether.client.ApiClient
 import ru.moderators.studytogether.ui.MainViewModel
 import ru.moderators.studytogether.ui.theme.StudyTogetherTheme
 
@@ -39,59 +41,93 @@ fun MainScreen(viewModel: MainViewModel = MainViewModel()) {
     var grade by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(ClaimType.OFFER) }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        if (currentUser == null) {
-            // Регистрация
-            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Имя") })
-            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-            Button(onClick = { viewModel.createUser(name, email) }) {
-                Text("Создать пользователя")
-            }
-        } else {
-            Text("Привет, ${currentUser!!.name}")
+    val snackbarMessage by viewModel.snackbarMessage.collectAsState()
 
-            Spacer(modifier = Modifier.height(8.dp))
+    val snackbarHostState = remember { SnackbarHostState() }
 
-            // Создание заявки
-            Row {
-                Text("Тип:")
-                RadioButton(selected = selectedType == ClaimType.OFFER, onClick = { selectedType = ClaimType.OFFER })
-                Text("Могу помочь")
-                RadioButton(selected = selectedType == ClaimType.NEED, onClick = { selectedType = ClaimType.NEED })
-                Text("Нужна помощь")
-            }
-            OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Предмет") })
-            OutlinedTextField(value = grade, onValueChange = { grade = it }, label = { Text("Класс") })
-            Button(onClick = {
-                val g = grade.toIntOrNull() ?: 5
-                viewModel.createClaim(selectedType, subject, g)
-            }) {
-                Text("Создать заявку")
-            }
+    LaunchedEffect(snackbarMessage) {
+        if (snackbarMessage != null) {
+            snackbarHostState.showSnackbar(snackbarMessage!!)
+            viewModel.clearSnackbar()
+        }
+    }
 
-            Spacer(modifier = Modifier.height(16.dp))
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
+            if (currentUser == null) {
+                // Регистрация
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Имя") })
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") })
+                Button(onClick = {
+                    viewModel.createUser(name, email)
+//                    ApiClient.client.get {  }
+                }) {
+                    Text("Создать пользователя")
+                }
+            } else {
+                Text("Привет, ${currentUser!!.name}")
 
-            // Список всех заявок
-            Text("Все заявки:", style = MaterialTheme.typography.titleMedium)
-            LazyColumn {
-                items(claims) { claim ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text("${claim.type}: ${claim.subject} (${claim.grade} класс)")
-                            Text("Пользователь: ${claim.userId}")
-                            Button(onClick = { viewModel.findMatchesForClaim(claim.id) }) {
-                                Text("Найти пару")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Создание заявки
+                Row {
+                    Text("Тип:")
+                    RadioButton(
+                        selected = selectedType == ClaimType.OFFER,
+                        onClick = { selectedType = ClaimType.OFFER })
+                    Text("Могу помочь")
+                    RadioButton(
+                        selected = selectedType == ClaimType.NEED,
+                        onClick = { selectedType = ClaimType.NEED })
+                    Text("Нужна помощь")
+                }
+                OutlinedTextField(
+                    value = subject,
+                    onValueChange = { subject = it },
+                    label = { Text("Предмет") })
+                OutlinedTextField(
+                    value = grade,
+                    onValueChange = { grade = it },
+                    label = { Text("Класс") })
+                Button(onClick = {
+                    val g = grade.toIntOrNull() ?: 5
+                    viewModel.createClaim(selectedType, subject, g)
+                }) {
+                    Text("Создать заявку")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Список всех заявок
+                Text("Все заявки:", style = MaterialTheme.typography.titleMedium)
+                LazyColumn {
+                    items(claims) { claim ->
+                        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text("${claim.type}: ${claim.subject} (${claim.grade} класс)")
+                                Text("Пользователь: ${claim.userId}")
+                                Button(onClick = { viewModel.findMatchesForClaim(claim.id) }) {
+                                    Text("Найти пару")
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Результаты мэтчинга
-            if (matches.isNotEmpty()) {
-                Text("Найдено пар:", style = MaterialTheme.typography.titleMedium)
-                matches.forEach { match ->
-                    Text("С пользователем ${match.matchedUserId} по предмету ${match.subject}")
+                // Результаты мэтчинга
+                if (matches.isNotEmpty()) {
+                    Text("Найдено пар:", style = MaterialTheme.typography.titleMedium)
+                    matches.forEach { match ->
+                        Text("С пользователем ${match.matchedUserId} по предмету ${match.subject}")
+                    }
                 }
             }
         }

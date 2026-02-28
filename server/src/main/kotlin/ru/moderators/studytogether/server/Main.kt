@@ -6,20 +6,31 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.application.*
+import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.slf4j.event.Level
 import ru.moderators.studytogether.api.*
 import ru.moderators.studytogether.server.storage.InMemoryStorage
 import java.util.*
 
 fun main() {
-    InMemoryStorage.users.put("0", User("0", "ADMIN", "ADMIN"))
+    InMemoryStorage.users["0"] = User("0", "ADMIN", "ADMIN")
     embeddedServer(Netty, port = 8080) {
         install(ContentNegotiation) {
             json()
         }
+
+        install(CallLogging) {
+            level = Level.INFO
+            // можно добавить формат
+            format { call ->
+                "${call.request.httpMethod} ${call.request.uri} - ${call.response.status()}"
+            }
+        }
+
         configureRouting()
     }.start(wait = true)
 }
@@ -44,7 +55,7 @@ fun Application.configureRouting() {
         }
 
         get("/users") {
-            call.respond(InMemoryStorage.users.values)
+            call.respond(InMemoryStorage.users.values.stream().toList())
         }
 
         post("/claim") {
@@ -72,7 +83,6 @@ fun Application.configureRouting() {
                 return@get call.respondText("Claim is not a NEED", status = io.ktor.http.HttpStatusCode.BadRequest)
             }
 
-            // Ищем все OFFER с тем же предметом и классом
             val matches = InMemoryStorage.claims.values.stream()
                 .filter { it.type == ClaimType.OFFER && it.subject == need.subject && it.grade == need.grade }
                 .map { offer ->

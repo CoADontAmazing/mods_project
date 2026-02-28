@@ -19,39 +19,63 @@ class MainViewModel : ViewModel() {
 
     private val _matches = MutableStateFlow<List<Match>>(emptyList())
     val matches: StateFlow<List<Match>> = _matches
+    private val _snackbarMessage = MutableStateFlow<String?>(null)
+    val snackbarMessage: StateFlow<String?> = _snackbarMessage
 
     fun createUser(name: String, email: String) {
         viewModelScope.launch {
-            val user = User(name = name, email = email)
-            val created = ApiClient.createUser(user)
-            _currentUser.value = created
+            _snackbarMessage.value = null // сбрасываем предыдущее
+            try {
+                val user = User(name = name, email = email)
+                val created = ApiClient.createUser(user)
+                _currentUser.value = created
+                _snackbarMessage.value = "Пользователь создан: ${created.name}"
+            } catch (e: Exception) {
+                _snackbarMessage.value = "Ошибка подключения: ${e.message}"
+            }
         }
     }
 
+    // Аналогично для других запросов (createClaim, loadAllClaims, findMatchesForClaim)
     fun createClaim(type: ClaimType, subject: String, grade: Int, topic: String = "") {
-        val userId = _currentUser.value?.id ?: return
         viewModelScope.launch {
-            val claim = Claim(
-                userId = userId,
-                type = type,
-                subject = subject,
-                grade = grade,
-                topic = topic
-            )
-            ApiClient.createClaim(claim)
-            loadAllClaims() // обновляем список
+            try {
+                val userId = _currentUser.value?.id ?: throw Exception("Нет пользователя")
+                val claim = Claim(userId = userId, type = type, subject = subject, grade = grade, topic = topic)
+                ApiClient.createClaim(claim)
+                loadAllClaims()
+                _snackbarMessage.value = "Заявка создана"
+            } catch (e: Exception) {
+                _snackbarMessage.value = "Ошибка: ${e.message}"
+            }
         }
     }
 
+    // Для обновления списка заявок тоже добавим уведомление
     fun loadAllClaims() {
         viewModelScope.launch {
-            _claims.value = ApiClient.getAllClaims()
+            try {
+                _claims.value = ApiClient.getAllClaims()
+                _snackbarMessage.value = "Заявки обновлены"
+            } catch (e: Exception) {
+                _snackbarMessage.value = "Ошибка: ${e.message}"
+            }
         }
     }
 
     fun findMatchesForClaim(claimId: String) {
         viewModelScope.launch {
-            _matches.value = ApiClient.getMatchesForClaim(claimId)
+            try {
+                _matches.value = ApiClient.getMatchesForClaim(claimId)
+                _snackbarMessage.value = "Найдено ${_matches.value.size} пар"
+            } catch (e: Exception) {
+                _snackbarMessage.value = "Ошибка поиска: ${e.message}"
+            }
         }
+    }
+
+    // Функция для очистки сообщения после показа
+    fun clearSnackbar() {
+        _snackbarMessage.value = null
     }
 }

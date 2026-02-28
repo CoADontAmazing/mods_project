@@ -10,11 +10,9 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
 import ru.moderators.studytogether.api.*
-import org.slf4j.LoggerFactory
 
 object ApiClient {
-    val LOGGER = LoggerFactory.getLogger("API")
-    private const val BASE_URL = "http://127.0.0.1:8080" // для эмулятора Android; для реальных устройств нужен IP
+    private const val BASE_URL = Url("http://127.0.0.1:8080") // для эмулятора Android; для реальных устройств нужен IP
 
     val client = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -25,7 +23,6 @@ object ApiClient {
     suspend fun createUser(user: User): User = client.post("$BASE_URL/user") {
         contentType(ContentType.Application.Json)
         setBody(user)
-        //LOGGER.warn("45678987")
     }.body()
 
     suspend fun createClaim(claim: Claim): Claim = client.post("$BASE_URL/claim") {
