@@ -1,5 +1,6 @@
 package ru.moderators.studytogether.server
 
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -14,10 +15,10 @@ import io.ktor.server.routing.*
 import org.slf4j.event.Level
 import ru.moderators.studytogether.api.*
 import ru.moderators.studytogether.server.storage.InMemoryStorage
+import ru.moderators.studytogether.server.storage.StoredUser
 import java.util.*
 
 fun main() {
-    InMemoryStorage.users["0"] = User("0", "ADMIN", "ADMIN")
     embeddedServer(Netty, port = 8080) {
         install(ContentNegotiation) {
             json()
@@ -35,15 +36,44 @@ fun main() {
     }.start(wait = true)
 }
 
-
 fun Application.configureRouting() {
     routing {
+        // Регистрация
+        post("/register") {
+            val request = call.receive<RegisterRequest>()
+            if (InMemoryStorage.users.values.any { it.email == request.email }) {
+                call.respondText("Email already exists", status = HttpStatusCode.Conflict)
+                return@post
+            }
+            val passwordHash = request.password
+            val newUser = StoredUser(
+                id = UUID.randomUUID().toString(),
+                name = request.username,
+                email = request.email,
+                passwordHash = passwordHash
+            )
+            InMemoryStorage.users[newUser.id] = newUser
+            call.respond(newUser.toUser())
+        }
+
+        // Вход
+        post("/login") {
+            val request = call.receive<LoginRequest>()
+            val user = InMemoryStorage.users.values.find { it.email == request.email }
+            if (user == null || !Objects.equals(request.password, user.passwordHash)) {
+                call.respondText("Invalid email or password", status = HttpStatusCode.Unauthorized)
+                return@post
+            }
+            call.respond(user.toUser())
+        }
+
+/*
         post("/user") {
             val user = call.receive<User>()
             val newUser = user.copy(id = UUID.randomUUID().toString())
             InMemoryStorage.users[newUser.id] = newUser
             call.respond(newUser)
-        }
+        }*/
 
         get("/user/{id}") {
             val id = call.parameters["id"] ?: return@get call.respondText("Missing id", status = io.ktor.http.HttpStatusCode.BadRequest)

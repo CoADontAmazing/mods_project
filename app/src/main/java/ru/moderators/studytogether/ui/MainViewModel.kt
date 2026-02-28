@@ -22,6 +22,33 @@ class MainViewModel : ViewModel() {
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage
 
+    fun register(name: String, email: String, password: String) {
+        viewModelScope.launch {
+            _snackbarMessage.value = null
+            try {
+                val user = ApiClient.register(name, email, password)
+                _currentUser.value = user
+                _snackbarMessage.value = "Регистрация успешна"
+            } catch (e: Exception) {
+                _snackbarMessage.value = "Ошибка регистрации: ${e.message}"
+            }
+        }
+    }
+
+    // Вход
+    fun login(email: String, password: String) {
+        viewModelScope.launch {
+            _snackbarMessage.value = null
+            try {
+                val user = ApiClient.login(email, password)
+                _currentUser.value = user
+                _snackbarMessage.value = "Вход выполнен"
+            } catch (e: Exception) {
+                _snackbarMessage.value = "Ошибка входа: ${e.message}"
+            }
+        }
+    }
+
     fun createUser(name: String, email: String) {
         viewModelScope.launch {
             _snackbarMessage.value = null // сбрасываем предыдущее

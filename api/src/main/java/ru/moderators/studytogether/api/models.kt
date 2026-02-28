@@ -35,3 +35,9 @@ data class Match(
     val grade: Int,
     val score: Float
 )
+
+@Serializable
+data class RegisterRequest(val username: String, val email: String, val password: String)
+
+@Serializable
+data class LoginRequest(val email: String, val password: String)
