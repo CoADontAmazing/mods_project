@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
+
+    <!-- Шапка с приветствием и поиском -->
+
+    <!-- Категории услуг -->
+
+    <LinearLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:background="#DDA0DD"
+        android:orientation="vertical"
+        android:padding="20dp"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="-16dp">
+
+        <TextView
+            android:id="@+id/greetingText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Доброе утро, 👋"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/userName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Студент"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- Поле поиска -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="#FFFFFF"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="#9400D3" />
+
+                <EditText
+                    android:layout_width="30dp"
+                    android:layout_height="56dp"
+                    android:layout_marginStart="22dp"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:hint="Поиск услуг..."
+                    android:maxLines="1"
+                    android:textSize="22sp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:padding="4dp"
+                    android:src="#4B0082" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <TextView
+            android:id="@+id/categoriesTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:text="Предлагаемые услуги"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="274dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="44dp"
+        android:layout_marginTop="32dp"
+        android:text="Описание товара"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/headerLayout" />
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="110dp"
+        android:layout_height="53dp"
+        android:layout_marginStart="44dp"
+        android:layout_marginTop="4dp"
+        android:backgroundTint="#9400D3"
+        android:text="Просмотр Товара"
+        android:textColor="#FFFFFF"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView" />
+
+
+    <!-- Нижняя навигация -->
+
+</androidx.constraintlayout.widget.ConstraintLayout>

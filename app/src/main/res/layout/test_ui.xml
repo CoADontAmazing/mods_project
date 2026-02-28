@@ -4,6 +4,7 @@
     android:layout_height="match_parent"
     android:baselineAligned="false"
     android:gravity="center"
+    android:id="@+id/layout"
     android:orientation="vertical">
 
     <Button

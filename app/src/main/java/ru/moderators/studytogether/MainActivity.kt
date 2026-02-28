@@ -1,47 +1,76 @@
 package ru.moderators.studytogether
 
+import ru.moderators.studytogether.ui.theme.StudyTogetherTheme
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import ru.moderators.studytogether.ui.theme.StudyTogetherTheme
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
         setContent {
             StudyTogetherTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Пользователь 8765",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                AppNavigation()
             }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
+fun AppNavigation(modifier: Modifier = Modifier) {
+    val navController: NavHostController = rememberNavController()
+    NavHost(
+        navController = navController,
+        startDestination = "first",
         modifier = modifier
-    )
+    ) {
+        composable("first") {
+            FirstScreen { name, email ->
+                // Передаём данные на второй экран через аргументы
+                navController.navigate("second/$name/$email")
+            }
+        }
+        composable("second/{name}/{email}") { backStackEntry ->
+            val name = backStackEntry.arguments?.getString("name") ?: ""
+            val email = backStackEntry.arguments?.getString("email") ?: ""
+            SecondScreen(name = name, email = email) {
+                navController.popBackStack() // возврат назад
+            }
+        }
+    }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
-    StudyTogetherTheme {
-        Greeting("Пользователь 98765")
+fun FirstScreen(onNavigate: (String, String) -> Unit) {
+    // Ваш UI для первого экрана, например:
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    Column {
+        TextField(value = name, onValueChange = { name = it })
+        TextField(value = email, onValueChange = { email = it })
+        Button(onClick = { onNavigate(name, email) }) {
+            Text("Перейти")
+        }
+    }
+}
+
+@Composable
+fun SecondScreen(name: String, email: String, onBack: () -> Unit) {
+    Column {
+        Text("Имя: $name")
+        Text("Email: $email")
+        Button(onClick = onBack) {
+            Text("Назад")
+        }
     }
 }
