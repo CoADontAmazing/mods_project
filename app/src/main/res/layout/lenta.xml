@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -66,7 +67,7 @@
                     android:layout_height="56dp"
                     android:layout_marginStart="22dp"
                     android:layout_weight="1"
-                    android:background="null"
+                    android:background="#00000000"
                     android:hint="Поиск услуг..."
                     android:maxLines="1"
                     android:textSize="22sp" />
@@ -110,7 +111,6 @@
         android:backgroundTint="#9400D3"
         android:text="Просмотр Товара"
         android:textColor="#FFFFFF"
-        app:cornerRadius="25dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView" />
 

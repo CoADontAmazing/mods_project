@@ -66,13 +66,13 @@ android {
 dependencies {
     implementation(project(":api"))
 
-    implementation("org.slf4j:slf4j-android:1.7.9")
-
     implementation("io.ktor:ktor-serialization-kotlinx-json:${ktor_version}")
     implementation("io.ktor:ktor-client-core:$ktor_version")
     implementation("io.ktor:ktor-client-cio:$ktor_version") // движок
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
 
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.cardview:cardview:1.0.0")
     implementation("androidx.core:core-ktx:$core_ktx_version")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version")
     implementation("androidx.activity:activity-compose:$activity_compose_version")
