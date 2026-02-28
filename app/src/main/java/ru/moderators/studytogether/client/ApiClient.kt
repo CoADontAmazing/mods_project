@@ -12,7 +12,7 @@ import kotlinx.serialization.json.Json
 import ru.moderators.studytogether.api.*
 
 object ApiClient {
-    private const val BASE_URL = Url("http://127.0.0.1:8080") // для эмулятора Android; для реальных устройств нужен IP
+    private const val BASE_URL = "http://127.0.0.1:8080" // для эмулятора Android; для реальных устройств нужен IP
 
     val client = HttpClient(CIO) {
         install(ContentNegotiation) {

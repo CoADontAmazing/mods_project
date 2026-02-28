@@ -1,135 +1,76 @@
 package ru.moderators.studytogether
 
+import ru.moderators.studytogether.ui.theme.StudyTogetherTheme
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import io.ktor.client.request.get
-import ru.moderators.studytogether.api.ClaimType
-import ru.moderators.studytogether.client.ApiClient
-import ru.moderators.studytogether.ui.MainViewModel
-import ru.moderators.studytogether.ui.theme.StudyTogetherTheme
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             StudyTogetherTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    MainScreen()
-                }
+                AppNavigation()
             }
         }
     }
 }
 
 @Composable
-fun MainScreen(viewModel: MainViewModel = MainViewModel()) {
-    val currentUser by viewModel.currentUser.collectAsState()
-    val claims by viewModel.claims.collectAsState()
-    val matches by viewModel.matches.collectAsState()
-
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var subject by remember { mutableStateOf("") }
-    var grade by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(ClaimType.OFFER) }
-
-    val snackbarMessage by viewModel.snackbarMessage.collectAsState()
-
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(snackbarMessage) {
-        if (snackbarMessage != null) {
-            snackbarHostState.showSnackbar(snackbarMessage!!)
-            viewModel.clearSnackbar()
+fun AppNavigation(modifier: Modifier = Modifier) {
+    val navController: NavHostController = rememberNavController()
+    NavHost(
+        navController = navController,
+        startDestination = "first",
+        modifier = modifier
+    ) {
+        composable("first") {
+            FirstScreen { name, email ->
+                // Передаём данные на второй экран через аргументы
+                navController.navigate("second/$name/$email")
+            }
+        }
+        composable("second/{name}/{email}") { backStackEntry ->
+            val name = backStackEntry.arguments?.getString("name") ?: ""
+            val email = backStackEntry.arguments?.getString("email") ?: ""
+            SecondScreen(name = name, email = email) {
+                navController.popBackStack() // возврат назад
+            }
         }
     }
+}
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
-            if (currentUser == null) {
-                // Регистрация
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Имя") })
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email") })
-                Button(onClick = {
-                    viewModel.createUser(name, email)
-//                    ApiClient.client.get {  }
-                }) {
-                    Text("Создать пользователя")
-                }
-            } else {
-                Text("Привет, ${currentUser!!.name}")
+@Composable
+fun FirstScreen(onNavigate: (String, String) -> Unit) {
+    // Ваш UI для первого экрана, например:
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    Column {
+        TextField(value = name, onValueChange = { name = it })
+        TextField(value = email, onValueChange = { email = it })
+        Button(onClick = { onNavigate(name, email) }) {
+            Text("Перейти")
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Создание заявки
-                Row {
-                    Text("Тип:")
-                    RadioButton(
-                        selected = selectedType == ClaimType.OFFER,
-                        onClick = { selectedType = ClaimType.OFFER })
-                    Text("Могу помочь")
-                    RadioButton(
-                        selected = selectedType == ClaimType.NEED,
-                        onClick = { selectedType = ClaimType.NEED })
-                    Text("Нужна помощь")
-                }
-                OutlinedTextField(
-                    value = subject,
-                    onValueChange = { subject = it },
-                    label = { Text("Предмет") })
-                OutlinedTextField(
-                    value = grade,
-                    onValueChange = { grade = it },
-                    label = { Text("Класс") })
-                Button(onClick = {
-                    val g = grade.toIntOrNull() ?: 5
-                    viewModel.createClaim(selectedType, subject, g)
-                }) {
-                    Text("Создать заявку")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Список всех заявок
-                Text("Все заявки:", style = MaterialTheme.typography.titleMedium)
-                LazyColumn {
-                    items(claims) { claim ->
-                        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text("${claim.type}: ${claim.subject} (${claim.grade} класс)")
-                                Text("Пользователь: ${claim.userId}")
-                                Button(onClick = { viewModel.findMatchesForClaim(claim.id) }) {
-                                    Text("Найти пару")
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Результаты мэтчинга
-                if (matches.isNotEmpty()) {
-                    Text("Найдено пар:", style = MaterialTheme.typography.titleMedium)
-                    matches.forEach { match ->
-                        Text("С пользователем ${match.matchedUserId} по предмету ${match.subject}")
-                    }
-                }
-            }
+@Composable
+fun SecondScreen(name: String, email: String, onBack: () -> Unit) {
+    Column {
+        Text("Имя: $name")
+        Text("Email: $email")
+        Button(onClick = onBack) {
+            Text("Назад")
         }
     }
 }
