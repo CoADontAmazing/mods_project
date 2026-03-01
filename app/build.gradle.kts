@@ -82,6 +82,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.navigation:navigation-compose:2.9.7")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("com.squareup.okio:okio:3.4.0")
+    implementation("org.jetbrains.kotlin:kotlin-parcelize-runtime:1.9.22")
 
     androidTestImplementation("androidx.test.ext:junit:$androidx_junit_version")
     androidTestImplementation("androidx.test.espresso:espresso-core:$espresso_version")

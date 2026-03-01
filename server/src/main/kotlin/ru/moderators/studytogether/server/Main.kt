@@ -1,5 +1,7 @@
 package ru.moderators.studytogether.server
 
+import ru.moderators.studytogether.api.*
+
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.engine.embeddedServer
@@ -13,121 +15,197 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.slf4j.event.Level
-import ru.moderators.studytogether.api.*
-import ru.moderators.studytogether.server.storage.InMemoryStorage
-import ru.moderators.studytogether.server.storage.StoredUser
-import java.util.*
+import ru.moderators.studytogether.server.InMemoryStorage.registerUser
+
+
 
 fun main() {
-    embeddedServer(Netty, port = 8080) {
-        install(ContentNegotiation) {
-            json()
-        }
+    val apiStorage: ApiStorage = InMemoryStorage
 
+    embeddedServer(Netty, port = 8080) {
+        registerUser(UserRegisterRequest("Admin", "noreply@admin.ru", "1234"))
+
+        configureSerialization()
         install(CallLogging) {
             level = Level.INFO
-            // можно добавить формат
             format { call ->
                 "${call.request.httpMethod} ${call.request.uri} - ${call.response.status()}"
             }
         }
 
-        configureRouting()
+        configureRouting(apiStorage)
     }.start(wait = true)
 }
 
-fun Application.configureRouting() {
+fun Application.configureSerialization() {
+    install(ContentNegotiation) {
+        json()
+    }
+}
+
+fun Application.configureRouting(apiStorage: ApiStorage) {
     routing {
-        // Регистрация
         post("/register") {
-            val request = call.receive<RegisterRequest>()
-            if (InMemoryStorage.users.values.any { it.email == request.email }) {
-                call.respondText("Email already exists", status = HttpStatusCode.Conflict)
-                return@post
+            val request = call.receive<UserRegisterRequest>()
+            try {
+                val user = apiStorage.registerUser(request)
+                call.respond(HttpStatusCode.Created, user)
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.Conflict, e.message ?: "Email already exists")
             }
-            val passwordHash = request.password
-            val newUser = StoredUser(
-                id = UUID.randomUUID().toString(),
-                name = request.username,
-                email = request.email,
-                passwordHash = passwordHash
-            )
-            InMemoryStorage.users[newUser.id] = newUser
-            call.respond(newUser.toUser())
         }
 
-        // Вход
         post("/login") {
-            val request = call.receive<LoginRequest>()
-            val user = InMemoryStorage.users.values.find { it.email == request.email }
-            if (user == null || !Objects.equals(request.password, user.passwordHash)) {
-                call.respondText("Invalid email or password", status = HttpStatusCode.Unauthorized)
-                return@post
+            val request = call.receive<UserLoginRequest>()
+            val user = apiStorage.loginUser(request)
+            if (user != null) {
+                call.respond(user)
+            } else {
+                call.respond(HttpStatusCode.Unauthorized, "Invalid email or password")
             }
-            call.respond(user.toUser())
         }
-
-/*
-        post("/user") {
-            val user = call.receive<User>()
-            val newUser = user.copy(id = UUID.randomUUID().toString())
-            InMemoryStorage.users[newUser.id] = newUser
-            call.respond(newUser)
-        }*/
 
         get("/user/{id}") {
-            val id = call.parameters["id"] ?: return@get call.respondText("Missing id", status = io.ktor.http.HttpStatusCode.BadRequest)
-            val user = InMemoryStorage.users[id]
-            if (user != null)
-                call.respond(user)
-            else
-                call.respondText("User not found", status = io.ktor.http.HttpStatusCode.NotFound)
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing id")
+            val user = apiStorage.findUserById(id)
+            if (user != null) call.respond(user) else call.respond(HttpStatusCode.NotFound, "User not found")
         }
 
         get("/users") {
-            call.respond(InMemoryStorage.users.values.stream().toList())
+            val users = apiStorage.findAllUsers()
+            call.respond(users)
+        }
+
+        get("/user/by-email") {
+            val email = call.request.queryParameters["email"] ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing email")
+            val result = apiStorage.findUserByEmail(email)
+            if (result != null) {
+                val (user, hash) = result
+                call.response.headers.append("X-Password-Hash", hash)
+                call.respond(user)
+            } else {
+                call.respond(HttpStatusCode.NotFound, "User not found")
+            }
+        }
+
+        put("/user/{userId}/rating") {
+            val userId = call.parameters["userId"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+            val newRating = call.receive<Map<String, Double>>()["rating"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+            apiStorage.updateUserRating(userId, newRating)
+            call.respond(HttpStatusCode.OK)
+        }
+
+        put("/user/{userId}/avatar") {
+            val userId = call.parameters["userId"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+            val avatarUrl = call.receive<Map<String, String>>()["avatarUrl"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+            apiStorage.updateUserAvatar(userId, avatarUrl)
+            call.respond(HttpStatusCode.OK)
+        }
+
+        post("/user/{userId}/like") {
+            val userId = call.parameters["userId"] ?: return@post call.respond(HttpStatusCode.BadRequest, "Missing userId")
+            try {
+                apiStorage.updateUserLikes(userId,
+                    apiStorage.findUserById(userId)?.likes?.plus(1) ?: 0
+                )
+                call.respond(HttpStatusCode.OK)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.NotFound, e.message ?: "User not found")
+            }
         }
 
         post("/claim") {
             val claim = call.receive<Claim>()
-            val newClaim = claim.copy(id = UUID.randomUUID().toString())
-            InMemoryStorage.claims[newClaim.id] = newClaim
-            call.respond(newClaim)
+            val newClaim = apiStorage.submitClaim(claim)
+            call.respond(HttpStatusCode.Created, newClaim)
         }
 
         get("/claims") {
-            call.respond(InMemoryStorage.claims.values.stream().toList())
+            call.respond(InMemoryStorage.findAllClaims())
         }
 
         get("/claims/user/{userId}") {
-            val userId = call.parameters["userId"] ?: return@get call.respondText("Missing userId")
-            val userClaims = InMemoryStorage.claims.values.stream().filter { it.userId == userId }
-            call.respond(userClaims)
+            val userId = call.parameters["userId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            call.respond(apiStorage.findClaimsByUserId(userId))
+        }
+
+        get("/claim/{id}") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val claim = apiStorage.findClaimById(id)
+            if (claim != null) call.respond(claim) else call.respond(HttpStatusCode.NotFound)
+        }
+
+        get("/claims/filter") {
+            val subject = call.request.queryParameters["subject"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val grade = call.request.queryParameters["grade"]?.toIntOrNull() ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val claims = apiStorage.findClaimsBySubjectAndGrade(subject, grade)
+            call.respond(claims)
         }
 
         get("/match/{claimId}") {
-            val claimId = call.parameters["claimId"] ?: return@get call.respondText("Missing claimId")
-            val need = InMemoryStorage.claims[claimId] ?: return@get call.respondText("Claim not found", status = io.ktor.http.HttpStatusCode.NotFound)
-
-            if (need.type != ClaimType.NEED) {
-                return@get call.respondText("Claim is not a NEED", status = io.ktor.http.HttpStatusCode.BadRequest)
-            }
-
-            val matches = InMemoryStorage.claims.values.stream()
-                .filter { it.type == ClaimType.OFFER && it.subject == need.subject && it.grade == need.grade }
-                .map { offer ->
-                    Match(
-                        claimId = need.id,
-                        matchedClaimId = offer.id,
-                        userId = need.userId,
-                        matchedUserId = offer.userId,
-                        subject = need.subject,
-                        grade = need.grade,
-                        score = 1.0f // простейший случай
-                    )
-                }
-
+            val claimId = call.parameters["claimId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val matches = apiStorage.findMatches(claimId)
             call.respond(matches)
+        }
+
+        post("/meeting") {
+            val meeting = call.receive<Meeting>()
+            apiStorage.submitMeeting(meeting)
+            call.respond(HttpStatusCode.Created)
+        }
+
+        get("/meetings/user/{userId}") {
+            val userId = call.parameters["userId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val meetings = apiStorage.findMeetingByUserId(userId)
+            call.respond(meetings)
+        }
+
+        get("/meeting/{id}") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val meeting = apiStorage.findMeetingById(id)
+            if (meeting != null) call.respond(meeting) else call.respond(HttpStatusCode.NotFound)
+        }
+
+        put("/meeting/{id}/status") {
+            val id = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+            val status = call.receive<MeetingStatus>()
+            apiStorage.updateMeetingStatus(id, status)
+            call.respond(HttpStatusCode.OK)
+        }
+
+        post("/message") {
+            val request = call.receive<SendMessageRequest>()
+            val message = apiStorage.sendMessage(request)
+            call.respond(HttpStatusCode.Created, message)
+        }
+
+        get("/messages/{meetingId}") {
+            val meetingId = call.parameters["meetingId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val messages = apiStorage.findAllMessagesByMeetingId(meetingId)
+            call.respond(messages)
+        }
+
+        post("/rating") {
+            val request = call.receive<SubmitRatingRequest>()
+            try {
+                val rating = apiStorage.submitRating(request)
+                call.respond(HttpStatusCode.Created, rating)
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, e.message ?: "Invalid rating")
+            }
+        }
+
+        get("/rating/{userId}") {
+            val userId = call.parameters["userId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val avg = apiStorage.getUserRating(userId)
+            call.respond(avg)
+        }
+
+        get("/rating/check") {
+            val meetingId = call.request.queryParameters["meetingId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val fromUserId = call.request.queryParameters["fromUserId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val hasRated = apiStorage.hasUserRatedMeeting(meetingId, fromUserId)
+            call.respond(hasRated)
         }
     }
 }
